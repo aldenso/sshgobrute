@@ -1,5 +1,5 @@
 /*
-golang example to find a password for a ssh user using a large wordlist file.
+golang program to find a password for a ssh user using a large wordlist file.
 TODO: add args to check if the ip is down and create a results file.
 */
 package main
@@ -86,11 +86,21 @@ func sshdialer(password string, ch chan Dialer) {
 	ch <- *salida
 }
 
+func printUsedValues() {
+	fmt.Println("file:", *passwordfile)
+	fmt.Println("ip:", *ip)
+	fmt.Println("port:", *port)
+	fmt.Println("user:", *user)
+	fmt.Println("timer:", timer)
+	fmt.Println("additional args:", flag.Args())
+}
+
 // var to test when you find the password
 var found bool
 
 func main() {
 	flag.Parse()
+	printUsedValues()
 	ch := make(chan Dialer)
 	fscanner := NewFileScanner()
 	err := fscanner.Open(*passwordfile)

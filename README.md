@@ -6,4 +6,6 @@ but works well and is really fast.
 
     $ go get golang.org/x/crypto/ssh
     $ go build
-    $ sshgobrute --help
+    $ ./sshgobrute --help
+
+If the sshd is using "PasswordAuthentication no" it won't work.

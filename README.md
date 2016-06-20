@@ -32,7 +32,8 @@ port: 22
 user: username
 timer: 200ms
 additional args: []
-Failed: 123456 ---Failed: 12345 ---Failed: money ---Failed: password ---Failed:                             mickey ---Failed: password1 ---Failed: 123456789 ---Failed: 12345678 ---Failed:
+Failed: 123456 ---Failed: 12345 ---Failed: money ---Failed: password ---Failed:
+mickey ---Failed: password1 ---Failed: 123456789 ---Failed: 12345678 ---Failed:
 .
 .
 .

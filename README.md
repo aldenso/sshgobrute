@@ -1,17 +1,17 @@
-sshgobrute
-==========
+# sshgobrute
 
-This is a program written in Golang for ssh brute force attacks, needs improvements
-but works well and is really fast.
+This is a program written in Golang for ssh brute force attacks, needs improvements but works well and is fast.
 
-```bash
-$ go get golang.org/x/crypto/ssh
+```sh
+go get github.com/aldenso/sshgobrute
 ```
 
+```sh
+sshgobrute --help
 ```
-$ go get github.com/aldenso/sshgobrute
-$ ./sshgobrute --help
-Usage of ./sshgobrute:
+
+```txt
+Usage of sshgobrute:
   -file string
         indicate wordlist file to use (default "wordlistfile.txt")
   -ip string
@@ -24,8 +24,11 @@ Usage of ./sshgobrute:
         indicate user to brute force (default "root")
 ```
 
+```sh
+sshgobrute -user username -timer=200ms
 ```
-$ ./sshgobrute -user username -timer=200ms
+
+```txt
 file: wordlistfile.txt
 ip: 192.168.125.100
 port: 22
@@ -37,11 +40,11 @@ mickey ---Failed: password1 ---Failed: 123456789 ---Failed: 12345678 ---Failed:
 .
 .
 .
-iled: randy ---Failed: reddog ---Failed: rebecca ---
+---Failed: randy ---Failed: reddog ---Failed: rebecca ---
 +++ Pattern found: SuperSecret +++
 
-Completed in 60.273904113 senconds
-+++ FOUND IT +++
+Completed in 60.273904113 seconds
++++ FOUND +++
 ```
 
 If the sshd is using "PasswordAuthentication no" it won't work.

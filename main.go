@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/color"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -76,7 +77,9 @@ func sshdialer(password string) *resp {
 		end := time.Now()
 		d := end.Sub(inittime)
 		duration := d.Seconds()
-		fmt.Printf("\n+++ Pattern found: %s +++\n", password)
+		fmt.Fprintf(color.Output, "\n%s", color.YellowString("###########################"))
+		fmt.Fprintf(color.Output, "%s %s", color.RedString("\nPattern found: "), color.GreenString(password))
+		fmt.Fprintf(color.Output, "\n%s", color.YellowString("###########################"))
 		fmt.Printf("\nCompleted in %v seconds\n", strconv.FormatFloat(duration, 'g', -1, 64))
 	}
 	salida.Error = err
@@ -107,7 +110,6 @@ func main() {
 			resp := sshdialer(password)
 			resp.mu.Lock()
 			if resp.Error == nil {
-				fmt.Println("+++ FOUND +++")
 				fscanner.Close()
 				resp.mu.Unlock()
 				os.Exit(0)
